@@ -1,10 +1,6 @@
 import random
 import sys
 import time  # 新增：导入time模块
-
-# 从v1复制所有类...
-
-# === 修改开始：添加Kruskal算法相关代码 ===
 class DisjointSet:
     """并查集，用于Kruskal算法"""
     def __init__(self, size):
@@ -88,7 +84,6 @@ class MazeGenerator:
         maze.walls[maze.end[0]][maze.end[1]][1] = False
         
         return time.time() - start_time
-# === 修改结束 ===
 
 
 def main():
