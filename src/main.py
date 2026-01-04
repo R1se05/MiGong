@@ -1,5 +1,6 @@
 import random
 import sys
+import time  # 新增导入
 
 class Maze:
     def __init__(self, width, height):
@@ -9,6 +10,7 @@ class Maze:
         self.start = (0, 0)
         self.end = (height-1, width-1)
         self.path = []
+        self.generation_time = 0  # 新增属性
         
     def remove_wall(self, y1, x1, y2, x2):
         if x1 == x2:
@@ -52,7 +54,7 @@ class Maze:
             print(bottom_str)
 
 
-class DisjointSet:  # 新增类
+class DisjointSet:
     def __init__(self, size):
         self.parent = list(range(size))
         self.rank = [0] * size
@@ -82,6 +84,7 @@ class MazeGenerator:
     @staticmethod
     def generate_dfs(maze):
         sys.setrecursionlimit(maze.width * maze.height * 2)
+        start_time = time.time()  # 添加计时
         
         def dfs(y, x, visited):
             visited[y][x] = True
@@ -97,9 +100,13 @@ class MazeGenerator:
         visited = [[False for _ in range(maze.width)] for _ in range(maze.height)]
         start_y, start_x = maze.start
         dfs(start_y, start_x, visited)
+        
+        maze.generation_time = time.time() - start_time  # 记录时间
     
     @staticmethod
-    def generate_kruskal(maze):  # 新增方法
+    def generate_kruskal(maze):
+        start_time = time.time()  # 添加计时
+        
         edges = []
         
         for y in range(maze.height):
@@ -121,21 +128,27 @@ class MazeGenerator:
             cell1_id, cell2_id, y1, x1, y2, x2 = edge
             if dsu.union(cell1_id, cell2_id):
                 maze.remove_wall(y1, x1, y2, x2)
+        
+        maze.generation_time = time.time() - start_time  # 记录时间
 
 
 def main():
-    print("=== 迷宫生成系统 v4.0 ===")  # 修改版本号
-    print("添加Kruskal生成算法")  # 修改功能描述
+    print("=== 迷宫生成系统 v5.0 ===")  # 修改版本号
+    print("添加算法计时功能")  # 修改功能描述
     
-    print("\n使用DFS算法生成迷宫：")
-    maze_dfs = Maze(6, 6)  # 修改：改为6x6
-    MazeGenerator.generate_dfs(maze_dfs)
-    maze_dfs.print_maze_ascii()
+    print("\n测试不同尺寸迷宫的生成时间：")
     
-    print("\n使用Kruskal算法生成迷宫：")  # 新增输出
-    maze_kruskal = Maze(6, 6)
-    MazeGenerator.generate_kruskal(maze_kruskal)
-    maze_kruskal.print_maze_ascii()
+    sizes = [(5, 5), (8, 8), (10, 10)]
+    for width, height in sizes:
+        print(f"\n{width}x{height} 迷宫：")
+        
+        maze_dfs = Maze(width, height)
+        MazeGenerator.generate_dfs(maze_dfs)
+        print(f"DFS算法耗时: {maze_dfs.generation_time:.4f}秒")  # 新增输出
+        
+        maze_kruskal = Maze(width, height)
+        MazeGenerator.generate_kruskal(maze_kruskal)
+        print(f"Kruskal算法耗时: {maze_kruskal.generation_time:.4f}秒")  # 新增输出
 
 
 if __name__ == "__main__":
