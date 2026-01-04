@@ -27,14 +27,36 @@ class Maze:
                 self.walls[y2][x2][1] = False
 
 
+class MazeGenerator:  # 新增类
+    @staticmethod
+    def generate_dfs(maze):
+        sys.setrecursionlimit(maze.width * maze.height * 2)
+        
+        def dfs(y, x, visited):
+            visited[y][x] = True
+            directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+            random.shuffle(directions)
+            
+            for dy, dx in directions:
+                ny, nx = y + dy, x + dx
+                if 0 <= ny < maze.height and 0 <= nx < maze.width and not visited[ny][nx]:
+                    maze.remove_wall(y, x, ny, nx)
+                    dfs(ny, nx, visited)
+        
+        visited = [[False for _ in range(maze.width)] for _ in range(maze.height)]
+        start_y, start_x = maze.start
+        dfs(start_y, start_x, visited)
+
+
 def main():
-    print("=== 迷宫生成系统 v1.0 ===")
-    print("基础迷宫类实现")
+    print("=== 迷宫生成系统 v2.0 ===")  # 修改版本号
+    print("添加DFS生成算法")  # 修改功能描述
     
     maze = Maze(5, 5)
+    MazeGenerator.generate_dfs(maze)  # 调用生成算法
+    
     print(f"创建了 {maze.width}x{maze.height} 的迷宫")
-    print(f"起点: {maze.start}")
-    print(f"终点: {maze.end}")
+    print("使用DFS算法生成了迷宫")
 
 
 if __name__ == "__main__":
