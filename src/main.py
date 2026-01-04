@@ -26,7 +26,7 @@ class Maze:
                 self.walls[y1][x1][3] = False
                 self.walls[y2][x2][1] = False
     
-    def print_maze_ascii(self):  # 新增方法
+    def print_maze_ascii(self):
         print("+" + "---+" * self.width)
         for y in range(self.height):
             row_str = "|"
@@ -52,6 +52,32 @@ class Maze:
             print(bottom_str)
 
 
+class DisjointSet:  # 新增类
+    def __init__(self, size):
+        self.parent = list(range(size))
+        self.rank = [0] * size
+        
+    def find(self, x):
+        if self.parent[x] != x:
+            self.parent[x] = self.find(self.parent[x])
+        return self.parent[x]
+        
+    def union(self, x, y):
+        root_x = self.find(x)
+        root_y = self.find(y)
+        
+        if root_x != root_y:
+            if self.rank[root_x] < self.rank[root_y]:
+                self.parent[root_x] = root_y
+            elif self.rank[root_x] > self.rank[root_y]:
+                self.parent[root_y] = root_x
+            else:
+                self.parent[root_y] = root_x
+                self.rank[root_x] += 1
+            return True
+        return False
+
+
 class MazeGenerator:
     @staticmethod
     def generate_dfs(maze):
@@ -71,17 +97,45 @@ class MazeGenerator:
         visited = [[False for _ in range(maze.width)] for _ in range(maze.height)]
         start_y, start_x = maze.start
         dfs(start_y, start_x, visited)
+    
+    @staticmethod
+    def generate_kruskal(maze):  # 新增方法
+        edges = []
+        
+        for y in range(maze.height):
+            for x in range(maze.width):
+                cell_id = y * maze.width + x
+                
+                if x < maze.width - 1:
+                    neighbor_id = y * maze.width + (x + 1)
+                    edges.append((cell_id, neighbor_id, y, x, y, x + 1))
+                
+                if y < maze.height - 1:
+                    neighbor_id = (y + 1) * maze.width + x
+                    edges.append((cell_id, neighbor_id, y, x, y + 1, x))
+        
+        random.shuffle(edges)
+        dsu = DisjointSet(maze.width * maze.height)
+        
+        for edge in edges:
+            cell1_id, cell2_id, y1, x1, y2, x2 = edge
+            if dsu.union(cell1_id, cell2_id):
+                maze.remove_wall(y1, x1, y2, x2)
 
 
 def main():
-    print("=== 迷宫生成系统 v3.0 ===")  # 修改版本号
-    print("添加ASCII显示功能")  # 修改功能描述
+    print("=== 迷宫生成系统 v4.0 ===")  # 修改版本号
+    print("添加Kruskal生成算法")  # 修改功能描述
     
-    maze = Maze(8, 8)  # 修改：改为8x8
-    MazeGenerator.generate_dfs(maze)
+    print("\n使用DFS算法生成迷宫：")
+    maze_dfs = Maze(6, 6)  # 修改：改为6x6
+    MazeGenerator.generate_dfs(maze_dfs)
+    maze_dfs.print_maze_ascii()
     
-    print(f"\n{8}x{8} 迷宫：")  # 修改输出
-    maze.print_maze_ascii()  # 调用显示方法
+    print("\n使用Kruskal算法生成迷宫：")  # 新增输出
+    maze_kruskal = Maze(6, 6)
+    MazeGenerator.generate_kruskal(maze_kruskal)
+    maze_kruskal.print_maze_ascii()
 
 
 if __name__ == "__main__":
