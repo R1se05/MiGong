@@ -1,7 +1,7 @@
 import random
 import sys
 import time
-from collections import deque  # 新增导入
+from collections import deque
 
 class Maze:
     def __init__(self, width, height):
@@ -12,7 +12,7 @@ class Maze:
         self.end = (height-1, width-1)
         self.path = []
         self.generation_time = 0
-        self.solution_time = 0  # 新增属性
+        self.solution_time = 0
         
     def remove_wall(self, y1, x1, y2, x2):
         if x1 == x2:
@@ -41,7 +41,7 @@ class Maze:
                     cell_content = "S"
                 elif (y, x) == self.end:
                     cell_content = "E"
-                elif (y, x) in self.path:  # 修改：显示路径
+                elif (y, x) in self.path:
                     cell_content = "*"
                 
                 if self.walls[y][x][1]:
@@ -136,7 +136,7 @@ class MazeGenerator:
         maze.generation_time = time.time() - start_time
 
 
-class MazeSolver:  # 新增类
+class MazeSolver:
     @staticmethod
     def solve_bfs(maze):
         start_time = time.time()
@@ -148,7 +148,7 @@ class MazeSolver:  # 新增类
         visited[start[0]][start[1]] = True
         parent = {start: None}
         
-        def can_move(y1, x1, y2, x2):  # 辅助函数
+        def can_move(y1, x1, y2, x2):
             if x1 == x2:
                 if y2 > y1:
                     return not maze.walls[y1][x1][2]
@@ -188,28 +188,69 @@ class MazeSolver:  # 新增类
         return False
 
 
+def simple_interface():  # 新增函数
+    print("=== 迷宫生成与求解系统 v7.0 ===")  # 修改版本号
+    print("添加简单交互界面")  # 修改功能描述
+    
+    while True:
+        print("\n请选择操作：")
+        print("1. 生成DFS迷宫")
+        print("2. 生成Kruskal迷宫")
+        print("3. 求解迷宫")
+        print("4. 显示迷宫")
+        print("0. 退出")
+        
+        choice = input("请输入选择 (0-4): ").strip()
+        
+        if choice == "0":
+            print("再见！")
+            break
+        elif choice == "1":
+            try:
+                size = int(input("请输入迷宫大小 (5-15): "))
+                if 5 <= size <= 15:
+                    maze = Maze(size, size)
+                    MazeGenerator.generate_dfs(maze)
+                    print(f"DFS迷宫生成完成，耗时: {maze.generation_time:.4f}秒")
+                    return maze
+                else:
+                    print("大小必须在5-15之间")
+            except ValueError:
+                print("请输入有效数字")
+        elif choice == "2":
+            try:
+                size = int(input("请输入迷宫大小 (5-15): "))
+                if 5 <= size <= 15:
+                    maze = Maze(size, size)
+                    MazeGenerator.generate_kruskal(maze)
+                    print(f"Kruskal迷宫生成完成，耗时: {maze.generation_time:.4f}秒")
+                    return maze
+                else:
+                    print("大小必须在5-15之间")
+            except ValueError:
+                print("请输入有效数字")
+        elif choice == "3":
+            if 'maze' in locals():
+                print("正在求解...")
+                success = MazeSolver.solve_bfs(maze)
+                if success:
+                    print(f"求解完成，耗时: {maze.solution_time:.4f}秒")
+                else:
+                    print("求解失败")
+            else:
+                print("请先生成迷宫")
+        elif choice == "4":
+            if 'maze' in locals():
+                print("\n当前迷宫：")
+                maze.print_maze_ascii()
+            else:
+                print("请先生成迷宫")
+        else:
+            print("无效选择")
+
+
 def main():
-    print("=== 迷宫生成与求解系统 v6.0 ===")  # 修改系统名和版本号
-    print("添加BFS求解功能")  # 修改功能描述
-    
-    print("\n生成并求解迷宫：")
-    maze = Maze(8, 8)
-    MazeGenerator.generate_dfs(maze)
-    print(f"迷宫生成耗时: {maze.generation_time:.4f}秒")
-    
-    print("\n未求解的迷宫：")
-    maze.print_maze_ascii()
-    
-    print("\n使用BFS算法求解...")
-    success = MazeSolver.solve_bfs(maze)
-    
-    if success:
-        print(f"找到路径！求解耗时: {maze.solution_time:.4f}秒")
-        print(f"路径长度: {len(maze.path)-1}步")
-        print("\n求解后的迷宫：")
-        maze.print_maze_ascii()
-    else:
-        print("未找到路径！")
+    maze = simple_interface()  # 调用交互界面
 
 
 if __name__ == "__main__":
