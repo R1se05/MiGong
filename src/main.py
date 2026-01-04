@@ -1,6 +1,7 @@
 import random
 import sys
-import time  # 新增导入
+import time
+from collections import deque  # 新增导入
 
 class Maze:
     def __init__(self, width, height):
@@ -10,7 +11,8 @@ class Maze:
         self.start = (0, 0)
         self.end = (height-1, width-1)
         self.path = []
-        self.generation_time = 0  # 新增属性
+        self.generation_time = 0
+        self.solution_time = 0  # 新增属性
         
     def remove_wall(self, y1, x1, y2, x2):
         if x1 == x2:
@@ -39,6 +41,8 @@ class Maze:
                     cell_content = "S"
                 elif (y, x) == self.end:
                     cell_content = "E"
+                elif (y, x) in self.path:  # 修改：显示路径
+                    cell_content = "*"
                 
                 if self.walls[y][x][1]:
                     row_str += f" {cell_content} |"
@@ -84,7 +88,7 @@ class MazeGenerator:
     @staticmethod
     def generate_dfs(maze):
         sys.setrecursionlimit(maze.width * maze.height * 2)
-        start_time = time.time()  # 添加计时
+        start_time = time.time()
         
         def dfs(y, x, visited):
             visited[y][x] = True
@@ -101,11 +105,11 @@ class MazeGenerator:
         start_y, start_x = maze.start
         dfs(start_y, start_x, visited)
         
-        maze.generation_time = time.time() - start_time  # 记录时间
+        maze.generation_time = time.time() - start_time
     
     @staticmethod
     def generate_kruskal(maze):
-        start_time = time.time()  # 添加计时
+        start_time = time.time()
         
         edges = []
         
@@ -129,26 +133,83 @@ class MazeGenerator:
             if dsu.union(cell1_id, cell2_id):
                 maze.remove_wall(y1, x1, y2, x2)
         
-        maze.generation_time = time.time() - start_time  # 记录时间
+        maze.generation_time = time.time() - start_time
+
+
+class MazeSolver:  # 新增类
+    @staticmethod
+    def solve_bfs(maze):
+        start_time = time.time()
+        start = maze.start
+        end = maze.end
+        
+        queue = deque([start])
+        visited = [[False for _ in range(maze.width)] for _ in range(maze.height)]
+        visited[start[0]][start[1]] = True
+        parent = {start: None}
+        
+        def can_move(y1, x1, y2, x2):  # 辅助函数
+            if x1 == x2:
+                if y2 > y1:
+                    return not maze.walls[y1][x1][2]
+                else:
+                    return not maze.walls[y1][x1][0]
+            elif y1 == y2:
+                if x2 > x1:
+                    return not maze.walls[y1][x1][1]
+                else:
+                    return not maze.walls[y1][x1][3]
+            return False
+        
+        while queue:
+            current = queue.popleft()
+            
+            if current == end:
+                path = []
+                while current is not None:
+                    path.append(current)
+                    current = parent[current]
+                maze.path = path[::-1]
+                maze.solution_time = time.time() - start_time
+                return True
+            
+            y, x = current
+            directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+            
+            for dy, dx in directions:
+                ny, nx = y + dy, x + dx
+                if 0 <= ny < maze.height and 0 <= nx < maze.width:
+                    if can_move(y, x, ny, nx) and not visited[ny][nx]:
+                        visited[ny][nx] = True
+                        parent[(ny, nx)] = current
+                        queue.append((ny, nx))
+        
+        maze.solution_time = time.time() - start_time
+        return False
 
 
 def main():
-    print("=== 迷宫生成系统 v5.0 ===")  # 修改版本号
-    print("添加算法计时功能")  # 修改功能描述
+    print("=== 迷宫生成与求解系统 v6.0 ===")  # 修改系统名和版本号
+    print("添加BFS求解功能")  # 修改功能描述
     
-    print("\n测试不同尺寸迷宫的生成时间：")
+    print("\n生成并求解迷宫：")
+    maze = Maze(8, 8)
+    MazeGenerator.generate_dfs(maze)
+    print(f"迷宫生成耗时: {maze.generation_time:.4f}秒")
     
-    sizes = [(5, 5), (8, 8), (10, 10)]
-    for width, height in sizes:
-        print(f"\n{width}x{height} 迷宫：")
-        
-        maze_dfs = Maze(width, height)
-        MazeGenerator.generate_dfs(maze_dfs)
-        print(f"DFS算法耗时: {maze_dfs.generation_time:.4f}秒")  # 新增输出
-        
-        maze_kruskal = Maze(width, height)
-        MazeGenerator.generate_kruskal(maze_kruskal)
-        print(f"Kruskal算法耗时: {maze_kruskal.generation_time:.4f}秒")  # 新增输出
+    print("\n未求解的迷宫：")
+    maze.print_maze_ascii()
+    
+    print("\n使用BFS算法求解...")
+    success = MazeSolver.solve_bfs(maze)
+    
+    if success:
+        print(f"找到路径！求解耗时: {maze.solution_time:.4f}秒")
+        print(f"路径长度: {len(maze.path)-1}步")
+        print("\n求解后的迷宫：")
+        maze.print_maze_ascii()
+    else:
+        print("未找到路径！")
 
 
 if __name__ == "__main__":
