@@ -5,6 +5,9 @@ from collections import deque
 
 class Maze:
     def __init__(self, width, height):
+        if width < 2 or height < 2:  # 新增：参数验证
+            raise ValueError("迷宫尺寸至少为2x2")
+        
         self.width = width
         self.height = height
         self.walls = [[[True, True, True, True] for _ in range(width)] for _ in range(height)]
@@ -15,6 +18,13 @@ class Maze:
         self.solution_time = 0
         
     def remove_wall(self, y1, x1, y2, x2):
+        if not (0 <= y1 < self.height and 0 <= x1 < self.width and  # 新增：边界检查
+                0 <= y2 < self.height and 0 <= x2 < self.width):
+            raise ValueError("坐标超出范围")
+        
+        if abs(y1 - y2) + abs(x1 - x2) != 1:  # 新增：验证相邻
+            raise ValueError("只能移除相邻单元格之间的墙")
+        
         if x1 == x2:
             if y2 > y1:
                 self.walls[y1][x1][2] = False
@@ -29,6 +39,35 @@ class Maze:
             else:
                 self.walls[y1][x1][3] = False
                 self.walls[y2][x2][1] = False
+    
+    def has_wall(self, y1, x1, y2, x2):  # 新增方法
+        if not (0 <= y1 < self.height and 0 <= x1 < self.width and
+                0 <= y2 < self.height and 0 <= x2 < self.width):
+            raise ValueError("坐标超出范围")
+        
+        if abs(y1 - y2) + abs(x1 - x2) != 1:
+            raise ValueError("只能检查相邻单元格之间的墙")
+        
+        if x1 == x2:
+            if y2 > y1:
+                return self.walls[y1][x1][2]
+            else:
+                return self.walls[y1][x1][0]
+        else:
+            if x2 > x1:
+                return self.walls[y1][x1][1]
+            else:
+                return self.walls[y1][x1][3]
+    
+    def get_neighbors(self, y, x):  # 新增方法
+        neighbors = []
+        directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+        
+        for dy, dx in directions:
+            ny, nx = y + dy, x + dx
+            if 0 <= ny < self.height and 0 <= nx < self.width:
+                neighbors.append((ny, nx))
+        return neighbors
     
     def print_maze_ascii(self):
         print("+" + "---+" * self.width)
@@ -148,19 +187,6 @@ class MazeSolver:
         visited[start[0]][start[1]] = True
         parent = {start: None}
         
-        def can_move(y1, x1, y2, x2):
-            if x1 == x2:
-                if y2 > y1:
-                    return not maze.walls[y1][x1][2]
-                else:
-                    return not maze.walls[y1][x1][0]
-            elif y1 == y2:
-                if x2 > x1:
-                    return not maze.walls[y1][x1][1]
-                else:
-                    return not maze.walls[y1][x1][3]
-            return False
-        
         while queue:
             current = queue.popleft()
             
@@ -174,23 +200,21 @@ class MazeSolver:
                 return True
             
             y, x = current
-            directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
-            
-            for dy, dx in directions:
-                ny, nx = y + dy, x + dx
-                if 0 <= ny < maze.height and 0 <= nx < maze.width:
-                    if can_move(y, x, ny, nx) and not visited[ny][nx]:
-                        visited[ny][nx] = True
-                        parent[(ny, nx)] = current
-                        queue.append((ny, nx))
+            for ny, nx in maze.get_neighbors(y, x):  # 修改：使用新方法
+                if not maze.has_wall(y, x, ny, nx) and not visited[ny][nx]:  # 修改：使用新方法
+                    visited[ny][nx] = True
+                    parent[(ny, nx)] = current
+                    queue.append((ny, nx))
         
         maze.solution_time = time.time() - start_time
         return False
 
 
-def simple_interface():  # 新增函数
-    print("=== 迷宫生成与求解系统 v7.0 ===")  # 修改版本号
-    print("添加简单交互界面")  # 修改功能描述
+def simple_interface():
+    print("=== 迷宫生成与求解系统 v8.0 ===")  # 修改版本号
+    print("优化迷宫类")  # 修改功能描述
+    
+    maze = None
     
     while True:
         print("\n请选择操作：")
@@ -198,9 +222,10 @@ def simple_interface():  # 新增函数
         print("2. 生成Kruskal迷宫")
         print("3. 求解迷宫")
         print("4. 显示迷宫")
+        print("5. 清除路径")  # 新增选项
         print("0. 退出")
         
-        choice = input("请输入选择 (0-4): ").strip()
+        choice = input("请输入选择 (0-5): ").strip()  # 修改：改为0-5
         
         if choice == "0":
             print("再见！")
@@ -212,11 +237,10 @@ def simple_interface():  # 新增函数
                     maze = Maze(size, size)
                     MazeGenerator.generate_dfs(maze)
                     print(f"DFS迷宫生成完成，耗时: {maze.generation_time:.4f}秒")
-                    return maze
                 else:
                     print("大小必须在5-15之间")
-            except ValueError:
-                print("请输入有效数字")
+            except ValueError as e:
+                print(f"错误: {e}")
         elif choice == "2":
             try:
                 size = int(input("请输入迷宫大小 (5-15): "))
@@ -224,25 +248,31 @@ def simple_interface():  # 新增函数
                     maze = Maze(size, size)
                     MazeGenerator.generate_kruskal(maze)
                     print(f"Kruskal迷宫生成完成，耗时: {maze.generation_time:.4f}秒")
-                    return maze
                 else:
                     print("大小必须在5-15之间")
-            except ValueError:
-                print("请输入有效数字")
+            except ValueError as e:
+                print(f"错误: {e}")
         elif choice == "3":
-            if 'maze' in locals():
+            if maze:
                 print("正在求解...")
                 success = MazeSolver.solve_bfs(maze)
                 if success:
                     print(f"求解完成，耗时: {maze.solution_time:.4f}秒")
+                    print(f"路径长度: {len(maze.path)-1}步")  # 新增输出
                 else:
                     print("求解失败")
             else:
                 print("请先生成迷宫")
         elif choice == "4":
-            if 'maze' in locals():
+            if maze:
                 print("\n当前迷宫：")
                 maze.print_maze_ascii()
+            else:
+                print("请先生成迷宫")
+        elif choice == "5":  # 新增选项处理
+            if maze:
+                maze.path = []
+                print("路径已清除")
             else:
                 print("请先生成迷宫")
         else:
@@ -250,7 +280,7 @@ def simple_interface():  # 新增函数
 
 
 def main():
-    maze = simple_interface()  # 调用交互界面
+    simple_interface()
 
 
 if __name__ == "__main__":
