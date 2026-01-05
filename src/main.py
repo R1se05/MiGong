@@ -16,7 +16,7 @@ class Maze:
         self.path = []
         self.generation_time = 0
         self.solution_time = 0
-        self.algorithm = "Unknown"  # 新增：记录算法
+        self.algorithm = "Unknown"
         
     def remove_wall(self, y1, x1, y2, x2):
         if not (0 <= y1 < self.height and 0 <= x1 < self.width and
@@ -60,15 +60,36 @@ class Maze:
             else:
                 return self.walls[y1][x1][3]
     
-    def get_neighbors(self, y, x):
+    def get_neighbors(self, y, x, with_walls=False):  # 修改：添加参数
         neighbors = []
         directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
         
         for dy, dx in directions:
             ny, nx = y + dy, x + dx
             if 0 <= ny < self.height and 0 <= nx < self.width:
-                neighbors.append((ny, nx))
+                if not with_walls:
+                    neighbors.append((ny, nx))
+                elif not self.has_wall(y, x, ny, nx):
+                    neighbors.append((ny, nx))
         return neighbors
+    
+    def is_connected(self):  # 新增方法
+        visited = [[False for _ in range(self.width)] for _ in range(self.height)]
+        stack = [self.start]
+        visited[self.start[0]][self.start[1]] = True
+        
+        while stack:
+            y, x = stack.pop()
+            
+            if (y, x) == self.end:
+                return True
+            
+            for ny, nx in self.get_neighbors(y, x, with_walls=True):
+                if not visited[ny][nx]:
+                    visited[ny][nx] = True
+                    stack.append((ny, nx))
+        
+        return False
     
     def print_maze_ascii(self):
         print("+" + "---+" * self.width)
@@ -146,7 +167,7 @@ class MazeGenerator:
         dfs(start_y, start_x, visited)
         
         maze.generation_time = time.time() - start_time
-        maze.algorithm = "DFS"  # 记录算法
+        maze.algorithm = "DFS"
     
     @staticmethod
     def generate_kruskal(maze):
@@ -175,7 +196,7 @@ class MazeGenerator:
                 maze.remove_wall(y1, x1, y2, x2)
         
         maze.generation_time = time.time() - start_time
-        maze.algorithm = "Kruskal"  # 记录算法
+        maze.algorithm = "Kruskal"
 
 
 class MazeSolver:
@@ -203,8 +224,8 @@ class MazeSolver:
                 return True
             
             y, x = current
-            for ny, nx in maze.get_neighbors(y, x):
-                if not maze.has_wall(y, x, ny, nx) and not visited[ny][nx]:
+            for ny, nx in maze.get_neighbors(y, x, with_walls=True):  # 修改：使用新参数
+                if not visited[ny][nx]:
                     visited[ny][nx] = True
                     parent[(ny, nx)] = current
                     queue.append((ny, nx))
@@ -213,7 +234,7 @@ class MazeSolver:
         return False
 
 
-class ConsoleInterface:  # 新增类
+class ConsoleInterface:
     def __init__(self):
         self.maze = None
     
@@ -228,6 +249,7 @@ class ConsoleInterface:  # 新增类
         print("5. 清除路径")
         print("6. 性能测试")
         print("7. 设置迷宫尺寸")
+        print("8. 检查连通性")  # 新增选项
         print("0. 退出")
         print("="*50)
     
@@ -236,7 +258,7 @@ class ConsoleInterface:  # 新增类
         
         while True:
             self.display_menu()
-            choice = input("请输入选择 (0-7): ").strip()
+            choice = input("请输入选择 (0-8): ").strip()  # 修改：改为0-8
             
             if choice == "0":
                 print("感谢使用，再见！")
@@ -297,10 +319,19 @@ class ConsoleInterface:  # 新增类
                 default_size = self.get_maze_size(default_size)
                 print(f"默认迷宫尺寸已设置为: {default_size}x{default_size}")
             
+            elif choice == "8":  # 新增选项处理
+                if self.maze:
+                    if self.maze.is_connected():
+                        print("迷宫是连通的（起点到终点有路径）")
+                    else:
+                        print("迷宫不是连通的（起点到终点无路径）")
+                else:
+                    print("请先生成迷宫！")
+            
             else:
                 print("无效选择，请重新输入！")
     
-    def get_maze_size(self, default_size):  # 新增方法
+    def get_maze_size(self, default_size):
         try:
             size_str = input(f"请输入迷宫大小 (当前: {default_size}): ").strip()
             if size_str:
@@ -313,7 +344,7 @@ class ConsoleInterface:  # 新增类
             print("输入无效，使用默认值")
         return default_size
     
-    def display_maze_info(self):  # 新增方法
+    def display_maze_info(self):
         if self.maze:
             print(f"\n迷宫信息：")
             print(f"尺寸: {self.maze.width}x{self.maze.height}")
@@ -325,7 +356,7 @@ class ConsoleInterface:  # 新增类
             print()
             self.maze.print_maze_ascii()
     
-    def run_performance_test(self):  # 新增方法
+    def run_performance_test(self):
         print("\n性能测试：")
         print("-" * 50)
         print(f"{'尺寸':<8} {'DFS(秒)':<10} {'Kruskal(秒)':<12} {'速度比':<10}")
@@ -365,8 +396,8 @@ class ConsoleInterface:  # 新增类
 
 
 def main():
-    print("=== 迷宫生成与求解系统 v10.0 ===")  # 修改版本号
-    print("完善控制台界面类")  # 修改功能描述
+    print("=== 迷宫生成与求解系统 v11.0 ===")  # 修改版本号
+    print("添加连通性检查功能")  # 修改功能描述
     
     interface = ConsoleInterface()
     interface.run()
