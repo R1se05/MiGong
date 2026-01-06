@@ -1,6 +1,8 @@
 import random
 import sys
 import time
+import os  # 新增导入
+import json  # 新增导入
 from collections import deque
 
 class Maze:
@@ -60,7 +62,7 @@ class Maze:
             else:
                 return self.walls[y1][x1][3]
     
-    def get_neighbors(self, y, x, with_walls=False):  # 修改：添加参数
+    def get_neighbors(self, y, x, with_walls=False):
         neighbors = []
         directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
         
@@ -73,7 +75,7 @@ class Maze:
                     neighbors.append((ny, nx))
         return neighbors
     
-    def is_connected(self):  # 新增方法
+    def is_connected(self):
         visited = [[False for _ in range(self.width)] for _ in range(self.height)]
         stack = [self.start]
         visited[self.start[0]][self.start[1]] = True
@@ -90,6 +92,31 @@ class Maze:
                     stack.append((ny, nx))
         
         return False
+    
+    def to_dict(self):  # 新增方法
+        return {
+            'width': self.width,
+            'height': self.height,
+            'start': self.start,
+            'end': self.end,
+            'algorithm': self.algorithm,
+            'generation_time': self.generation_time,
+            'solution_time': self.solution_time,
+            'path': self.path,
+            'walls': self.walls
+        }
+    
+    @classmethod
+    def from_dict(cls, data):  # 新增方法
+        maze = cls(data['width'], data['height'])
+        maze.start = tuple(data['start'])
+        maze.end = tuple(data['end'])
+        maze.algorithm = data['algorithm']
+        maze.generation_time = data['generation_time']
+        maze.solution_time = data['solution_time']
+        maze.path = [tuple(p) for p in data['path']]
+        maze.walls = data['walls']
+        return maze
     
     def print_maze_ascii(self):
         print("+" + "---+" * self.width)
@@ -224,7 +251,7 @@ class MazeSolver:
                 return True
             
             y, x = current
-            for ny, nx in maze.get_neighbors(y, x, with_walls=True):  # 修改：使用新参数
+            for ny, nx in maze.get_neighbors(y, x, with_walls=True):
                 if not visited[ny][nx]:
                     visited[ny][nx] = True
                     parent[(ny, nx)] = current
@@ -240,7 +267,7 @@ class ConsoleInterface:
     
     def display_menu(self):
         print("\n" + "="*50)
-        print("迷宫生成与求解系统")
+        print("迷宫生成与求解系统 v12.0")  # 修改版本号
         print("="*50)
         print("1. 生成DFS迷宫")
         print("2. 生成Kruskal迷宫")
@@ -249,7 +276,9 @@ class ConsoleInterface:
         print("5. 清除路径")
         print("6. 性能测试")
         print("7. 设置迷宫尺寸")
-        print("8. 检查连通性")  # 新增选项
+        print("8. 检查连通性")
+        print("9. 保存迷宫")  # 新增选项
+        print("10. 加载迷宫")  # 新增选项
         print("0. 退出")
         print("="*50)
     
@@ -258,7 +287,7 @@ class ConsoleInterface:
         
         while True:
             self.display_menu()
-            choice = input("请输入选择 (0-8): ").strip()  # 修改：改为0-8
+            choice = input("请输入选择 (0-10): ").strip()  # 修改：改为0-10
             
             if choice == "0":
                 print("感谢使用，再见！")
@@ -319,7 +348,7 @@ class ConsoleInterface:
                 default_size = self.get_maze_size(default_size)
                 print(f"默认迷宫尺寸已设置为: {default_size}x{default_size}")
             
-            elif choice == "8":  # 新增选项处理
+            elif choice == "8":
                 if self.maze:
                     if self.maze.is_connected():
                         print("迷宫是连通的（起点到终点有路径）")
@@ -327,6 +356,12 @@ class ConsoleInterface:
                         print("迷宫不是连通的（起点到终点无路径）")
                 else:
                     print("请先生成迷宫！")
+            
+            elif choice == "9":  # 新增选项处理
+                self.save_maze()
+            
+            elif choice == "10":  # 新增选项处理
+                self.load_maze()
             
             else:
                 print("无效选择，请重新输入！")
@@ -393,11 +428,55 @@ class ConsoleInterface:
         
         print("-" * 50)
         print("速度比 > 1: Kruskal较慢, < 1: Kruskal较快")
+    
+    def save_maze(self):  # 新增方法
+        if not self.maze:
+            print("请先生成迷宫！")
+            return
+        
+        filename = input("请输入保存的文件名 (例如: maze.json): ").strip()
+        if not filename:
+            print("文件名不能为空！")
+            return
+        
+        if not filename.endswith('.json'):
+            filename += '.json'
+        
+        try:
+            maze_dict = self.maze.to_dict()
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(maze_dict, f, indent=2, default=str)
+            print(f"迷宫已保存到: {filename}")
+        except Exception as e:
+            print(f"保存失败: {e}")
+    
+    def load_maze(self):  # 新增方法
+        filename = input("请输入要加载的文件名: ").strip()
+        if not filename:
+            print("文件名不能为空！")
+            return
+        
+        if not os.path.exists(filename):
+            print(f"文件不存在: {filename}")
+            return
+        
+        try:
+            with open(filename, 'r', encoding='utf-8') as f:
+                maze_dict = json.load(f)
+            
+            self.maze = Maze.from_dict(maze_dict)
+            print(f"成功加载迷宫: {filename}")
+            print(f"尺寸: {self.maze.width}x{self.maze.height}")
+            print(f"算法: {self.maze.algorithm}")
+        except json.JSONDecodeError:
+            print("文件格式错误！")
+        except Exception as e:
+            print(f"加载失败: {e}")
 
 
 def main():
-    print("=== 迷宫生成与求解系统 v11.0 ===")  # 修改版本号
-    print("添加连通性检查功能")  # 修改功能描述
+    print("=== 迷宫生成与求解系统 v12.0 ===")
+    print("添加文件保存/加载功能")  # 修改功能描述
     
     interface = ConsoleInterface()
     interface.run()
